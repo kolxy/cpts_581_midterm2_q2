@@ -45,10 +45,19 @@
 
 package org.jfree.chart.plot;
 
-import java.awt.Paint;
-import java.awt.Stroke;
+import java.awt.*;
+import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.event.MarkerChangeEvent;
+import org.jfree.data.Range;
+import org.jfree.text.TextUtilities;
+import org.jfree.ui.LengthAdjustmentType;
+import org.jfree.ui.RectangleAnchor;
+import org.jfree.ui.RectangleEdge;
+import org.jfree.ui.RectangleInsets;
 
 /**
  * A marker that represents a single value.  Markers can be added to plots to
@@ -152,5 +161,63 @@ public class ValueMarker extends Marker {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public void drawAxis(Graphics2D g2,
+                         XYPlot plot,
+                         ValueAxis valueAxis,
+                         Rectangle2D dataArea,
+                         PlotOrientation preferredOrientation,
+                         RectangleEdge axisEdge) {
+        double value = this.value;
+        Range range = valueAxis.getRange();
+        if (!range.contains(value)) {
+            return;
+        }
+
+        double v = valueAxis.valueToJava2D(value, dataArea, axisEdge);
+        PlotOrientation orientation = plot.getOrientation();
+        Line2D line = null;
+        if (orientation == preferredOrientation) {
+            line = new Line2D.Double(dataArea.getMinX(), v,
+                    dataArea.getMaxX(), v);
+        }
+        else {
+            line = new Line2D.Double(v, dataArea.getMinY(), v,
+                    dataArea.getMaxY());
+        }
+
+        final Composite originalComposite = g2.getComposite();
+        g2.setComposite(AlphaComposite.getInstance(
+                AlphaComposite.SRC_OVER, this.getAlpha()));
+        g2.setPaint(this.getPaint());
+        g2.setStroke(this.getStroke());
+        g2.draw(line);
+
+        String label = this.getLabel();
+        RectangleAnchor anchor = this.getLabelAnchor();
+        if (label != null) {
+            Font labelFont = this.getLabelFont();
+            g2.setFont(labelFont);
+            g2.setPaint(this.getLabelPaint());
+            Rectangle2D markerArea = line.getBounds2D();
+            RectangleInsets markerOffset = this.getLabelOffset();
+            LengthAdjustmentType labelOffsetType = LengthAdjustmentType.EXPAND;
+            Rectangle2D anchorRect = null;
+            if (orientation == preferredOrientation) {
+                anchorRect = markerOffset.createAdjustedRectangle(markerArea,
+                        LengthAdjustmentType.CONTRACT, labelOffsetType);
+            }
+            else {
+                anchorRect = markerOffset.createAdjustedRectangle(markerArea,
+                        labelOffsetType, LengthAdjustmentType.CONTRACT);
+            }
+            Point2D coordinates = RectangleAnchor.coordinates(anchorRect, anchor);
+            TextUtilities.drawAlignedString(label, g2,
+                    (float) coordinates.getX(), (float) coordinates.getY(),
+                    this.getLabelTextAnchor());
+        }
+        g2.setComposite(originalComposite);
     }
 }

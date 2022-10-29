@@ -60,11 +60,8 @@
 
 package org.jfree.chart.plot;
 
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Paint;
-import java.awt.Stroke;
+import java.awt.*;
+import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -73,13 +70,11 @@ import java.util.EventListener;
 
 import javax.swing.event.EventListenerList;
 
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.event.MarkerChangeEvent;
 import org.jfree.chart.event.MarkerChangeListener;
 import org.jfree.io.SerialUtilities;
-import org.jfree.ui.LengthAdjustmentType;
-import org.jfree.ui.RectangleAnchor;
-import org.jfree.ui.RectangleInsets;
-import org.jfree.ui.TextAnchor;
+import org.jfree.ui.*;
 import org.jfree.util.ObjectUtilities;
 import org.jfree.util.PaintUtilities;
 
@@ -677,4 +672,21 @@ public abstract class Marker implements Cloneable, Serializable {
         this.listenerList = new EventListenerList();
     }
 
+    /**
+     * Refactored drawAxisMarker
+     * @param g2
+     * @param plot
+     * @param valueAxis
+     * @param dataArea
+     * @param preferredOrientation
+     * @param axisEdge
+     */
+    public void drawAxis(Graphics2D g2,
+                         XYPlot plot,
+                         ValueAxis valueAxis,
+                         Rectangle2D dataArea,
+                         PlotOrientation preferredOrientation,
+                         RectangleEdge axisEdge) {
+        // Do nothing, let subclass implement this method
+    }
 }

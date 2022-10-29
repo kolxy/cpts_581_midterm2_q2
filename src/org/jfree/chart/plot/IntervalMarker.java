@@ -45,15 +45,17 @@
 
 package org.jfree.chart.plot;
 
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Paint;
-import java.awt.Stroke;
+import java.awt.*;
+import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.io.Serializable;
 
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.event.MarkerChangeEvent;
-import org.jfree.ui.GradientPaintTransformer;
-import org.jfree.ui.LengthAdjustmentType;
+import org.jfree.data.Range;
+import org.jfree.text.TextUtilities;
+import org.jfree.ui.*;
 import org.jfree.util.ObjectUtilities;
 
 /**
@@ -230,4 +232,135 @@ public class IntervalMarker extends Marker implements Cloneable, Serializable {
         return super.clone();
     }
 
+    @Override
+    public void drawAxis(Graphics2D g2,
+                         XYPlot plot,
+                         ValueAxis valueAxis,
+                         Rectangle2D dataArea,
+                         PlotOrientation preferredOrientation,
+                         RectangleEdge axisEdge) {
+        double start = this.getStartValue();
+        double end = this.getEndValue();
+        Range range = valueAxis.getRange();
+        if (!(range.intersects(start, end))) {
+            return;
+        }
+
+        double start2d = valueAxis.valueToJava2D(start, dataArea,
+                axisEdge);
+        double end2d = valueAxis.valueToJava2D(end, dataArea,
+                axisEdge);
+        double low = Math.min(start2d, end2d);
+        double high = Math.max(start2d, end2d);
+
+        PlotOrientation orientation = plot.getOrientation();
+        Rectangle2D rect = null;
+        if (orientation == preferredOrientation) {
+            // clip top and bottom bounds to data area
+            low = Math.max(low, dataArea.getMinY());
+            high = Math.min(high, dataArea.getMaxY());
+            rect = new Rectangle2D.Double(dataArea.getMinX(),
+                    low, dataArea.getWidth(),
+                    high - low);
+        }
+        else {
+            // clip left and right bounds to data area
+            low = Math.max(low, dataArea.getMinX());
+            high = Math.min(high, dataArea.getMaxX());
+            rect = new Rectangle2D.Double(low,
+                    dataArea.getMinY(), high - low,
+                    dataArea.getHeight());
+        }
+
+        final Composite originalComposite = g2.getComposite();
+        g2.setComposite(AlphaComposite.getInstance(
+                AlphaComposite.SRC_OVER, this.getAlpha()));
+        Paint point = this.getPaint();
+        if (point instanceof GradientPaint) {
+            GradientPaint gPoint = (GradientPaint) point;
+            GradientPaintTransformer t = this.getGradientPaintTransformer();
+            if (t != null) {
+                gPoint = t.transform(gPoint, rect);
+            }
+            g2.setPaint(gPoint);
+        }
+        else {
+            g2.setPaint(point);
+        }
+        g2.fill(rect);
+
+        // now draw the outlines, if visible...
+        drawMarkerOutline(g2, plot, valueAxis, dataArea, preferredOrientation, axisEdge);
+
+        String label = this.getLabel();
+        RectangleAnchor anchor = this.getLabelAnchor();
+        if (label != null) {
+            Font labelFont = this.getLabelFont();
+            g2.setFont(labelFont);
+            g2.setPaint(this.getLabelPaint());
+            RectangleInsets markerOffset = this.getLabelOffset();
+            LengthAdjustmentType labelOffsetType = this.getLabelOffsetType();
+            Rectangle2D anchorRect = null;
+            if (orientation == PlotOrientation.HORIZONTAL) {
+                anchorRect = markerOffset.createAdjustedRectangle(rect,
+                        LengthAdjustmentType.CONTRACT, labelOffsetType);
+            }
+            else if (orientation == PlotOrientation.VERTICAL) {
+                anchorRect = markerOffset.createAdjustedRectangle(rect,
+                        labelOffsetType, LengthAdjustmentType.CONTRACT);
+            }
+            Point2D coordinates = RectangleAnchor.coordinates(anchorRect, anchor);
+            TextUtilities.drawAlignedString(label, g2,
+                    (float) coordinates.getX(), (float) coordinates.getY(),
+                    this.getLabelTextAnchor());
+        }
+        g2.setComposite(originalComposite);
+    }
+
+    private void drawMarkerOutline(Graphics2D g2,
+                                   XYPlot plot,
+                                   ValueAxis valueAxis,
+                                   Rectangle2D dataArea,
+                                   PlotOrientation preferredOrientation,
+                                   RectangleEdge axisEdge) {
+
+        double start = this.getStartValue();
+        double end = this.getEndValue();
+        double start2d = valueAxis.valueToJava2D(start, dataArea,
+                axisEdge);
+        double end2d = valueAxis.valueToJava2D(end, dataArea,
+                axisEdge);
+        Range range = valueAxis.getRange();
+        PlotOrientation orientation = plot.getOrientation();
+        if (this.getOutlinePaint() != null && this.getOutlineStroke() != null) {
+            Line2D line = new Line2D.Double();
+            g2.setPaint(this.getOutlinePaint());
+            g2.setStroke(this.getOutlineStroke());
+
+            double x0 = dataArea.getMinX();
+            double x1 = dataArea.getMaxX();
+            double y0 = dataArea.getMinY();
+            double y1 = dataArea.getMaxY();
+
+            if (orientation == preferredOrientation) {
+                if (range.contains(start)) {
+                    line.setLine(x0, start2d, x1, start2d);
+                    g2.draw(line);
+                }
+                if (range.contains(end)) {
+                    line.setLine(x0, end2d, x1, end2d);
+                    g2.draw(line);
+                }
+            } else {
+                if (range.contains(start)) {
+                    line.setLine(start2d, y0, start2d, y1);
+                    g2.draw(line);
+                }
+                if (range.contains(end)) {
+                    line.setLine(end2d, y0, end2d, y1);
+                    g2.draw(line);
+                }
+            }
+        }
+    }
 }
