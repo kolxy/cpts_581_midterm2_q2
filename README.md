@@ -1,5 +1,9 @@
 # Midterm 2 Question 2
 
+To see exact code changes, click [here](https://github.com/kolxy/cpts_581_midterm2_q2/compare/master...change).
+
+Following are the changes I've done for each issue.
+
 ## 1. Duplicated code 
 
 There are a lot of code blocks that resemble each other, thus we need to extract the duplicated code to a new method.
